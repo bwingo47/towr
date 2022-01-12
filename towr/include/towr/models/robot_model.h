@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 
 #include <towr/models/dynamic_model.h>
+#include <towr/models/srbd_with_momentum.h>
 #include <towr/models/kinematic_model.h>
 
 namespace towr {
@@ -67,10 +68,13 @@ struct RobotModel {
    * See folder: \ref include/towr/models/examples for more information.
    * @ingroup Robots
    */
-  enum Robot { Monoped, ///< one-legged hopper
+  enum Robot { MonopedWithMomentum,
+               Monoped, ///< one-legged hopper
                Biped,   ///< two-legged
                Hyq,     ///< four-legged robot from IIT
                Anymal,  ///< four-legged robot from Anybotics
+               A1,      ///< four-legged robot from Unitree
+               A1WithMomentum,
                ROBOT_COUNT };
 
 
@@ -79,15 +83,19 @@ struct RobotModel {
 
   KinematicModel::Ptr kinematic_model_;
   DynamicModel::Ptr   dynamic_model_;
+  SingleRigidBodyDynamicsWithMomentum::Ptr srbd_momentum_model_;
 };
 
 
 const static std::map<RobotModel::Robot, std::string> robot_names =
 {
   {RobotModel::Monoped, "Monoped"},
+  {RobotModel::MonopedWithMomentum, "MonopedWithMomentum"},
   {RobotModel::Biped,   "Biped"},
   {RobotModel::Hyq,     "Hyq"},
-  {RobotModel::Anymal,  "Anymal"}
+  {RobotModel::Anymal,  "Anymal"},
+  {RobotModel::A1, "A1"},
+  {RobotModel::A1WithMomentum, "A1WithMomentum"}
 };
 
 } /* namespace towr */

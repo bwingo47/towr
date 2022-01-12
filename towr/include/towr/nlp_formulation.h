@@ -39,6 +39,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <towr/terrain/height_map.h>
 #include <towr/parameters.h>
 
+#include <towr/costs/com_tracking_cost.h>
+#include <towr/costs/ee_tracking_cost.h>
+
 namespace towr {
 
 /**
@@ -71,7 +74,7 @@ namespace towr {
  * in this paper: https://ieeexplore.ieee.org/document/8283570/
  */
 class NlpFormulation {
-public:
+ public:
   using VariablePtrVec   = std::vector<ifopt::VariableSet::Ptr>;
   using ContraintPtrVec  = std::vector<ifopt::ConstraintSet::Ptr>;
   using CostPtrVec       = std::vector<ifopt::CostTerm::Ptr>;
@@ -96,6 +99,10 @@ public:
   /** @brief The ifopt costs to tune the motion. */
   ContraintPtrVec GetCosts() const;
 
+  ContraintPtrVec GetTrackingCosts(const SplineHolder& spline_holder) const;
+
+  ContraintPtrVec GetNodeTrackingCosts() const;
+
 
   BaseState initial_base_;
   BaseState final_base_;
@@ -104,7 +111,7 @@ public:
   HeightMap::Ptr terrain_;
   Parameters params_;
 
-private:
+ private:
   // variables
   std::vector<NodesVariables::Ptr> MakeBaseVariables() const;
   std::vector<NodesVariablesPhaseBased::Ptr> MakeEndeffectorVariables() const;
@@ -122,11 +129,21 @@ private:
   ContraintPtrVec MakeSwingConstraint() const;
   ContraintPtrVec MakeBaseRangeOfMotionConstraint(const SplineHolder& s) const;
   ContraintPtrVec MakeBaseAccConstraint(const SplineHolder& s) const;
+  ContraintPtrVec MakeCoMTrackingConstraint(const SplineHolder& s) const;
 
   // costs
   CostPtrVec GetCost(const Parameters::CostName& id, double weight) const;
   CostPtrVec MakeForcesCost(double weight) const;
   CostPtrVec MakeEEMotionCost(double weight) const;
+
+  CostPtrVec GetTrackingCost(const Parameters::CostName& id, double weight, std::vector<Eigen::Vector3d> target,
+                             const SplineHolder& s) const;
+  CostPtrVec MakeEETrackingCost(std::vector<Eigen::Vector3d> target, double weight, const SplineHolder& s) const;
+  CostPtrVec MakeCOMTrackingCost(std::vector<Eigen::Vector3d> target, double weight, const SplineHolder& s) const;
+
+  CostPtrVec GetNodeTrackingCost(const Parameters::CostName& id, double weight, const std::vector<Eigen::Vector3d>& target) const;
+  CostPtrVec MakeCOMNodeTrackingCost(const std::vector<Eigen::Vector3d>& target, double weight) const;
+
 };
 
 } /* namespace towr */

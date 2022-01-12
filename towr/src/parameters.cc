@@ -41,6 +41,9 @@ Parameters::Parameters ()
 {
   // constructs optimization variables
   duration_base_polynomial_ = 0.1;
+  duration_com_polynomial_ = 0.1;
+  duration_angular_momentum_polynomial_ = 0.1;
+  duration_ellipsoid_polynomial_ = 0.1;
   force_polynomials_per_stance_phase_ = 3;
   ee_polynomials_per_swing_phase_ = 2; // so step can at least lift leg
 
@@ -54,13 +57,14 @@ Parameters::Parameters ()
   // a minimal set of basic constraints
   constraints_.push_back(Terrain);
   constraints_.push_back(Dynamic); //Ensures that the dynamic model is fullfilled at discrete times.
-  constraints_.push_back(BaseAcc); // so accelerations don't jump between polynomials
-  constraints_.push_back(EndeffectorRom); //Ensures that the range of motion is respected at discrete times.
+//  constraints_.push_back(BaseAcc); // so accelerations don't jump between polynomials
+//  constraints_.push_back(EndeffectorRom); //Ensures that the range of motion is respected at discrete times.
   constraints_.push_back(Force); // ensures unilateral forces and inside the friction cone.
   constraints_.push_back(Swing); // creates smoother swing motions, not absolutely required.
 
   // optional costs to e.g penalize endeffector forces
-  // costs_.push_back({ForcesCostID, 1.0}); weighed by 1.0 relative to other costs
+  costs_.push_back({ForcesCostID, 1e6}); // weighed by 1.0 relative to other costs
+  costs_.push_back({EEMotionCostID, 1e6});
 
   // bounds on final 6DoF base state
   bounds_final_lin_pos_ = {X,Y};
@@ -71,6 +75,72 @@ Parameters::Parameters ()
   // additional restrictions are set directly on the variables in nlp_factory,
   // such as e.g. initial and endeffector,...
 }
+
+
+Parameters::Parameters (const std::vector<Eigen::Vector3d>& target, const Eigen::VectorXd& rho, double time_step)
+{
+  // reference trajectory
+  target_ = target;
+
+  // constructs optimization variables
+  duration_base_polynomial_ = 0.1;
+  duration_com_polynomial_ = 0.1;
+  duration_angular_momentum_polynomial_ = 0.1;
+  duration_ellipsoid_polynomial_ = 0.1;
+  force_polynomials_per_stance_phase_ = 3;
+  ee_polynomials_per_swing_phase_ = 2; // so step can at least lift leg
+//        am_phase_polynomials_per_stance_phase_ = 3;
+
+  // parameters related to specific constraints (only used when it is added as well)
+  force_limit_in_normal_direction_ = 100000;
+  dt_constraint_range_of_motion_ = 0.02;
+  dt_constraint_dynamic_ = 0.04;
+  dt_constraint_base_motion_ = duration_base_polynomial_/4.; // only for base RoM constraint
+  dt_cost_ee_tracking = time_step;
+  dt_cost_com_tracking = time_step;
+  bound_phase_duration_ = std::make_pair(0.2, 1.0);  // used only when optimizing phase durations, so gait
+
+  // a minimal set of basic constraints
+  constraints_.push_back(Terrain);
+  constraints_.push_back(Dynamic); //Ensures that the dynamic model is fullfilled at discrete times.
+
+//        constraints_.push_back(BaseAcc); // so accelerations don't jump between polynomials
+
+  constraints_.push_back(EndeffectorRom); //Ensures that the range of motion is respected at discrete times.
+  constraints_.push_back(Force); // ensures unilateral forces and inside the friction cone.
+  constraints_.push_back(Swing); // creates smoother swing motions, not absolutely required.
+
+//  constraints_.push_back(CoMTracking);
+
+  // optional costs to e.g penalize endeffector forces
+//        costs_.push_back({CoMPositionTrackingCostID, 1.0}); //weighed by 1.0 relative to other costs
+//        costs_track_.push_back(std::make_tuple(CoMPositionNodeTrackingCostID, rho(0), target));
+
+//        costs_track_.push_back(std::make_tuple(EETrackingCostID, rho(1), target));
+
+  costs_track_.push_back(std::make_tuple(CoMTrackingCostID, rho(0), target));
+
+  //        costs_track_.push_back(std::make_tuple(AMTrackingCostID, rho(2), target));
+//        costs_track_.push_back(std::make_tuple(LMTrackingCostID, rho(2), target));
+
+//        costs_track_.push_back(std::make_tuple(MoITrackingCostID, rho(3), target));
+
+  /// cost debugging
+//  costs_node_track_.push_back(std::make_tuple(CoMNodeTrackingCostID, rho(0), target));
+//  costs_.push_back({EEMotionCostID, 1e6});
+//  costs_.push_back({ForcesCostID, 1e6});
+
+  // bounds on final 6DoF base state
+  bounds_final_lin_pos_ = {X,Y};
+  bounds_final_lin_vel_ = {X,Y,Z};
+  bounds_final_ang_pos_ = {X,Y,Z};
+  bounds_final_ang_vel_ = {X,Y,Z};
+
+  // additional restrictions are set directly on the variables in nlp_factory,
+  // such as e.g. initial and endeffector,...
+}
+
+
 
 void
 
@@ -95,6 +165,62 @@ Parameters::GetBasePolyDurations () const
   }
 
   return base_spline_timings_;
+}
+
+Parameters::VecTimes
+Parameters::GetCoMPolyDurations () const
+{
+  std::vector<double> com_spline_timings_;
+  double dt = duration_com_polynomial_;
+  double t_left = GetTotalTime ();
+
+  double eps = 1e-10; // since repeated subtraction causes inaccuracies
+  while (t_left > eps) {
+      double duration = t_left>dt?  dt : t_left;
+      com_spline_timings_.push_back(duration);
+
+      t_left -= dt;
+  }
+
+  return com_spline_timings_;
+
+}
+
+Parameters::VecTimes
+Parameters::GetEllipsoidPolyDurations () const
+{
+  std::vector<double> ellipsoid_spline_timings_;
+  double dt = duration_ellipsoid_polynomial_;
+  double t_left = GetTotalTime ();
+
+  double eps = 1e-10; // since repeated subtraction causes inaccuracies
+  while (t_left > eps) {
+      double duration = t_left>dt?  dt : t_left;
+      ellipsoid_spline_timings_.push_back(duration);
+
+      t_left -= dt;
+  }
+  return ellipsoid_spline_timings_;
+
+        
+}
+
+Parameters::VecTimes
+Parameters::GetAMPolyDurations () const
+{
+  std::vector<double> am_spline_timings_;
+  double dt = duration_angular_momentum_polynomial_;
+  double t_left = GetTotalTime ();
+
+  double eps = 1e-10; // since repeated subtraction causes inaccuracies
+  while (t_left > eps) {
+      double duration = t_left>dt?  dt : t_left;
+      am_spline_timings_.push_back(duration);
+
+      t_left -= dt;
+  }
+
+  return am_spline_timings_;
 }
 
 int

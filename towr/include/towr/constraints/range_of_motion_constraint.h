@@ -53,7 +53,7 @@ namespace towr {
   * @ingroup Constraints
   */
 class RangeOfMotionConstraint : public TimeDiscretizationConstraint {
-public:
+ public:
   using EE = uint;
   using Vector3d = Eigen::Vector3d;
 
@@ -71,7 +71,7 @@ public:
                           const SplineHolder& spline_holder);
   virtual ~RangeOfMotionConstraint() = default;
 
-private:
+ private:
   NodeSpline::Ptr base_linear_;     ///< the linear position of the base.
   EulerConverter base_angular_; ///< the orientation of the base.
   NodeSpline::Ptr ee_motion_;       ///< the linear position of the endeffectors.

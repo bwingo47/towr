@@ -46,7 +46,7 @@ namespace towr {
  * @ingroup Constraints
  */
 class BaseMotionConstraint : public TimeDiscretizationConstraint {
-public:
+ public:
   /**
    * @brief Links the base variables and sets hardcoded bounds on the state.
    * @param T  The total time of the optimization horizon.
@@ -60,7 +60,7 @@ public:
   void UpdateBoundsAtInstance (double t, int k, VecBound&) const override;
   void UpdateJacobianAtInstance(double t, int k, std::string, Jacobian&) const override;
 
-private:
+ private:
   NodeSpline::Ptr base_linear_;
   NodeSpline::Ptr base_angular_;
 

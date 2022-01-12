@@ -34,6 +34,11 @@ namespace towr {
 
 State::State (int dim, int n_derivatives)
 {
+  /**
+   * std::vector<>(repeat_size, value) is the fill constructor.
+   * values_ is a std::vector, with 'n_derivatives' components,
+   * each component is a VectorXd::zero of dimension 'dim'.
+   */
   values_ = std::vector<VectorXd>(n_derivatives, VectorXd::Zero(dim));
 }
 
@@ -66,6 +71,12 @@ State::a () const
 {
   return at(kAcc);
 }
+
+//Node::Node(int dim)
+//: State(dim, n_derivatives)
+//{
+//  int a = -1;
+//}
 
 } // namespace towr
 

@@ -16,7 +16,7 @@ endif()
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 
 # The motion-planning problem formulated through variables and constraints
-add_library(${PROJECT_NAME} SHARED
+add_library(${PROJECT_NAME} STATIC
   # sample formulation usage
   src/nlp_formulation.cc
   src/parameters.cc
@@ -26,23 +26,32 @@ add_library(${PROJECT_NAME} SHARED
   src/nodes_variables_phase_based.cc
   src/phase_durations.cc
   # models
+  src/srbd_with_momentum.cc
   src/robot_model.cc
   src/dynamic_model.cc
   src/single_rigid_body_dynamics.cc
   # constraints
+  src/com_tracking_constraint.cc
   src/time_discretization_constraint.cc
   src/base_motion_constraint.cc
+  src/base_motion_constraint_with_momentum.cc
   src/terrain_constraint.cc
   src/swing_constraint.cc
   src/force_constraint.cc
   src/total_duration_constraint.cc
   src/dynamic_constraint.cc
+  src/dynamic_constraint_with_momentum.cc
   src/range_of_motion_constraint.cc
+  src/range_of_motion_constraint_with_momentum.cc
   src/spline_acc_constraint.cc
   src/linear_constraint.cc
   # costs
   src/node_cost.cc
   src/soft_constraint.cc
+  src/time_discretization_cost.cc
+  src/com_tracking_cost.cc
+  src/ee_tracking_cost.cc
+  src/node_tracking_cost.cc
   # initialization
   src/gait_generator.cc
   src/monoped_gait_generator.cc
@@ -61,7 +70,9 @@ add_library(${PROJECT_NAME} SHARED
   src/spline_holder.cc
   src/euler_converter.cc
   src/phase_durations_observer.cc
-)
+  src/nlp_formulation_with_momentum.cc
+  src/spline_holder_extended.cc
+  )
 target_link_libraries(${PROJECT_NAME} 
   PUBLIC 
     ifopt::ifopt_core
@@ -77,16 +88,41 @@ target_include_directories(${PROJECT_NAME}
 ## Testing ##
 #############
 enable_testing()
-# example problem solved with IPOPT
-add_executable(${PROJECT_NAME}-example 
-  test/hopper_example.cc
+
+## example problem solved with IPOPT
+add_executable(${PROJECT_NAME}-example
+  test/hopper_example_with_momentum.cc
 )
-target_link_libraries(${PROJECT_NAME}-example  
+
+target_link_libraries(${PROJECT_NAME}-example
   PRIVATE
-    ${PROJECT_NAME} 
+    ${PROJECT_NAME}
     ifopt::ifopt_ipopt
 )
+
 add_test(${PROJECT_NAME}-example ${PROJECT_NAME}-example)
+
+## A1 example with momentum
+add_executable(${PROJECT_NAME}-a1-momentum
+        test/a1_example_with_momentum.cc
+        )
+target_link_libraries(${PROJECT_NAME}-a1-momentum
+        PRIVATE
+        ${PROJECT_NAME}
+        ifopt::ifopt_ipopt
+        )
+add_test(${PROJECT_NAME}-a1-momentum ${PROJECT_NAME}-a1-momentum)
+
+## A1 example by Ziyi
+add_executable(${PROJECT_NAME}-a1
+        test/a1_example.cc
+        )
+target_link_libraries(${PROJECT_NAME}-a1
+        PRIVATE
+        ${PROJECT_NAME}
+        ifopt::ifopt_ipopt
+        )
+add_test(${PROJECT_NAME}-a1 ${PROJECT_NAME}-a1)
 
 # unit tests of costs/constraints
 find_package(GTest QUIET)
@@ -111,7 +147,10 @@ endif()
 include(GNUInstallDirs) # for correct libraries locations across platforms
 set(config_package_location "share/${PROJECT_NAME}/cmake") # for .cmake find-scripts installs
 install(
-  TARGETS ${PROJECT_NAME} ${PROJECT_NAME}-example 
+  TARGETS ${PROJECT_NAME}-example
+          ${PROJECT_NAME}-a1-momentum
+          ${PROJECT_NAME}-a1
+          ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}-targets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

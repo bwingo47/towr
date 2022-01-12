@@ -60,6 +60,7 @@ class NodesVariablesPhaseBased : public NodesVariables {
 public:
   using Ptr         = std::shared_ptr<NodesVariablesPhaseBased>;
   using NodeIds     = std::vector<int>;
+  // key of type int, and each associated element is a std::vector of NodeValueInfo.
   using OptIndexMap = std::map<int, std::vector<NodeValueInfo> >;
 
   /**
@@ -212,6 +213,22 @@ public:
                          int n_polys_in_changing_phase);
   virtual ~NodesVariablesEEForce() = default;
   OptIndexMap GetPhaseBasedEEParameterization ();
+};
+
+
+/**
+ * @brief Variables fully defining the angular momentum trajectory.
+ *
+ * @ingroup Variables
+ */
+class NodesVariablesAngularMomentum : public NodesVariablesPhaseBased {
+ public:
+  NodesVariablesAngularMomentum(int phase_count,
+                                bool is_in_contact_at_start,
+                                const std::string& name,
+                                int n_polys_in_changing_phase);
+  virtual ~NodesVariablesAngularMomentum() = default;
+  OptIndexMap GetPhaseBasedAMParameterization ();
 };
 
 } /* namespace towr */

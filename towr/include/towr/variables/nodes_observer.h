@@ -64,6 +64,9 @@ public:
   virtual void UpdateNodes() = 0;
 
 protected:
+  /**
+   * Pointer to the linked NodeVariables object
+   */
   NodeSubjectPtr node_values_;
 };
 

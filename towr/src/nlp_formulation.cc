@@ -40,8 +40,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <towr/constraints/terrain_constraint.h>
 #include <towr/constraints/total_duration_constraint.h>
 #include <towr/constraints/spline_acc_constraint.h>
+#include <towr/constraints/com_tracking_constraint.h>
 
 #include <towr/costs/node_cost.h>
+#include <towr/costs/node_tracking_cost.h>
 #include <towr/variables/nodes_variables_all.h>
 
 #include <iostream>
@@ -133,10 +135,10 @@ NlpFormulation::MakeEndeffectorVariables () const
   double T = params_.GetTotalTime();
   for (int ee=0; ee<params_.GetEECount(); ee++) {
     auto nodes = std::make_shared<NodesVariablesEEMotion>(
-                                              params_.GetPhaseCount(ee),
-                                              params_.ee_in_contact_at_start_.at(ee),
-                                              id::EEMotionNodes(ee),
-                                              params_.ee_polynomials_per_swing_phase_);
+        params_.GetPhaseCount(ee),
+        params_.ee_in_contact_at_start_.at(ee),
+        id::EEMotionNodes(ee),
+        params_.ee_polynomials_per_swing_phase_);
 
     // initialize towards final footholds
     double yaw = final_base_.ang.p().z();
@@ -163,10 +165,10 @@ NlpFormulation::MakeForceVariables () const
   double T = params_.GetTotalTime();
   for (int ee=0; ee<params_.GetEECount(); ee++) {
     auto nodes = std::make_shared<NodesVariablesEEForce>(
-                                              params_.GetPhaseCount(ee),
-                                              params_.ee_in_contact_at_start_.at(ee),
-                                              id::EEForceNodes(ee),
-                                              params_.force_polynomials_per_stance_phase_);
+        params_.GetPhaseCount(ee),
+        params_.ee_in_contact_at_start_.at(ee),
+        id::EEForceNodes(ee),
+        params_.force_polynomials_per_stance_phase_);
 
     // initialize with mass of robot distributed equally on all legs
     double m = model_.dynamic_model_->m();
@@ -210,7 +212,7 @@ NlpFormulation::GetConstraints(const SplineHolder& spline_holder) const
 
 NlpFormulation::ContraintPtrVec
 NlpFormulation::GetConstraint (Parameters::ConstraintName name,
-                           const SplineHolder& s) const
+                               const SplineHolder& s) const
 {
   switch (name) {
     case Parameters::Dynamic:        return MakeDynamicConstraint(s);
@@ -221,10 +223,16 @@ NlpFormulation::GetConstraint (Parameters::ConstraintName name,
     case Parameters::Force:          return MakeForceConstraint();
     case Parameters::Swing:          return MakeSwingConstraint();
     case Parameters::BaseAcc:        return MakeBaseAccConstraint(s);
+    case Parameters::CoMTracking:    return MakeCoMTrackingConstraint(s);
     default: throw std::runtime_error("constraint not defined!");
   }
 }
 
+NlpFormulation::ContraintPtrVec
+NlpFormulation::MakeCoMTrackingConstraint(const SplineHolder &s) const
+{
+  return {std::make_shared<COMTrackingConstraint>(params_.target_, params_.GetTotalTime(), params_.dt_cost_com_tracking, s)};
+}
 
 NlpFormulation::ContraintPtrVec
 NlpFormulation::MakeBaseRangeOfMotionConstraint (const SplineHolder& s) const
@@ -322,10 +330,10 @@ NlpFormulation::MakeBaseAccConstraint (const SplineHolder& s) const
   ContraintPtrVec constraints;
 
   constraints.push_back(std::make_shared<SplineAccConstraint>
-                        (s.base_linear_, id::base_lin_nodes));
+                            (s.base_linear_, id::base_lin_nodes));
 
   constraints.push_back(std::make_shared<SplineAccConstraint>
-                        (s.base_angular_, id::base_ang_nodes));
+                            (s.base_angular_, id::base_ang_nodes));
 
   return constraints;
 }
@@ -368,9 +376,99 @@ NlpFormulation::MakeEEMotionCost(double weight) const
   CostPtrVec cost;
 
   for (int ee=0; ee<params_.GetEECount(); ee++) {
-    cost.push_back(std::make_shared<NodeCost>(id::EEMotionNodes(ee), kVel, X, weight));
-    cost.push_back(std::make_shared<NodeCost>(id::EEMotionNodes(ee), kVel, Y, weight));
+//    cost.push_back(std::make_shared<NodeCost>(id::EEMotionNodes(ee), kVel, X, weight));
+//    cost.push_back(std::make_shared<NodeCost>(id::EEMotionNodes(ee), kVel, Y, weight));
+    cost.push_back(std::make_shared<NodeCost>(id::EEMotionNodes(ee), kPos, Z, weight));
   }
+
+  return cost;
+}
+
+NlpFormulation::ContraintPtrVec
+NlpFormulation::GetTrackingCosts(const SplineHolder& s) const
+{
+  ContraintPtrVec costs;
+  for (const auto& tuple : params_.costs_track_)
+    for (auto c : GetTrackingCost(std::get<0>(tuple), std::get<1>(tuple), std::get<2>(tuple), s))
+      costs.push_back(c);
+
+  return costs;
+}
+
+NlpFormulation::CostPtrVec
+NlpFormulation::GetTrackingCost(const towr::Parameters::CostName &id,
+                                double weight,
+                                std::vector<Eigen::Vector3d> target,
+                                const towr::SplineHolder &s) const
+{
+  switch (id) {
+    case Parameters::EETrackingCostID: return MakeEETrackingCost(target, weight, s);
+    case Parameters::CoMTrackingCostID: return MakeCOMTrackingCost(target, weight, s);
+      //    case Parameters::AMTrackingCostID: return MakeAMTrackingCost(target, weight, s);
+      //    case Parameters::LMTrackingCostID: return MakeLMTrackingCost(target, weight, s);
+      //    case Parameters::MoITrackingCostID: return MakeMoITrackingCost(target, weight, s);
+    default: throw std::runtime_error("cost not defined!");
+  }
+
+}
+
+NlpFormulation::CostPtrVec
+NlpFormulation::MakeEETrackingCost(std::vector<Eigen::Vector3d> target, double weight, const SplineHolder &s) const
+{
+  CostPtrVec cost;
+
+  for (int ee=0; ee<params_.GetEECount(); ee++) {
+    cost.push_back(std::make_shared<EETrackingCost>(target, weight, params_.GetTotalTime(),
+                                                    params_.dt_cost_ee_tracking, ee, s));
+  }
+
+  return cost;
+}
+
+NlpFormulation::CostPtrVec
+NlpFormulation::MakeCOMTrackingCost(std::vector<Eigen::Vector3d> target,
+                                    double weight,
+                                    const towr::SplineHolder &s) const
+{
+  CostPtrVec cost;
+
+  cost.push_back(std::make_shared<COMTrackingCost>(target, weight, params_.GetTotalTime(),
+                                                   params_.dt_cost_com_tracking, s));
+
+  return cost;
+
+}
+
+NlpFormulation::ContraintPtrVec
+NlpFormulation::GetNodeTrackingCosts() const {
+  ContraintPtrVec costs;
+  for (const auto &tuple : params_.costs_node_track_)
+    for (auto c : GetNodeTrackingCost(std::get<0>(tuple), std::get<1>(tuple), std::get<2>(tuple)))
+      costs.push_back(c);
+  return costs;
+}
+
+NlpFormulation::CostPtrVec
+NlpFormulation::GetNodeTrackingCost(const towr::Parameters::CostName &id,
+                                    double weight,
+                                    const std::vector<Eigen::Vector3d> &target) const
+{
+  switch (id) {
+    case Parameters::CoMNodeTrackingCostID:
+      return MakeCOMNodeTrackingCost(target, weight);
+    default:
+      throw std::runtime_error("cost not defined!");
+  }
+}
+
+NlpFormulation::CostPtrVec
+NlpFormulation::MakeCOMNodeTrackingCost(const std::vector<Eigen::Vector3d> &target, double weight) const
+{
+  CostPtrVec cost;
+
+//      cost.push_back(std::make_shared<NodeTrackingCost>(id::com_lin_nodes, kPos, X, target, weight));
+//      cost.push_back(std::make_shared<NodeTrackingCost>(id::com_lin_nodes, kPos, Y, target, weight));
+  cost.push_back(std::make_shared<NodeTrackingCost>(id::base_lin_nodes, kPos, Z, target, weight));
 
   return cost;
 }

@@ -51,6 +51,10 @@ State Polynomial::GetPoint(double t_local) const
     assert(false);//("spliner.cc called with dt<0")
 
   int n_dim = coeff_.front().size();
+
+  /**
+   * out = (f, fd, fdd)
+   */
   State out(n_dim, 3);
 
   for (auto d : {kPos, kVel, kAcc})
@@ -64,8 +68,17 @@ double
 Polynomial::GetDerivativeWrtCoeff (double t, Dx deriv, Coefficients c) const
 {
   switch (deriv) {
+    /**
+     * d(f)/dc. return t^c.
+     */
     case kPos:   return               std::pow(t,c);         break;
+    /**
+     * d(fd)/dc. If c >= B, return c*t^(c-1), else return 0.
+     */
     case kVel:   return c>=B? c*      std::pow(t,c-1) : 0.0; break;
+    /**
+     * d(fdd)/dc. If c >= C, return c*(c-1)*t^(c-2), else return 0.
+     */
     case kAcc:   return c>=C? c*(c-1)*std::pow(t,c-2) : 0.0; break;
     default: assert(false); // derivative not defined
   }

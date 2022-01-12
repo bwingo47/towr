@@ -42,6 +42,7 @@ SplineHolder::SplineHolder (NodesVariables::Ptr base_lin_nodes,
 {
   base_linear_  = std::make_shared<NodeSpline>(base_lin_nodes.get(), base_poly_durations);
   base_angular_ = std::make_shared<NodeSpline>(base_ang_nodes.get(), base_poly_durations);
+
   phase_durations_ = phase_durations;
 
   for (uint ee=0; ee<ee_motion_nodes.size(); ++ee) {

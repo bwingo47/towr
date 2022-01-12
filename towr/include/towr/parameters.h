@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <array>
 #include <utility> // std::pair, std::make_pair
+#include <Eigen/Dense>
 
 namespace towr {
 
@@ -143,17 +144,26 @@ public:
                         Force,          ///< sets ForceConstraint
                         Swing,          ///< sets SwingConstraint
                         BaseRom,        ///< sets BaseMotionConstraint
-                        BaseAcc         ///< sets SplineAccConstraint
+                        BaseAcc,         ///< sets SplineAccConstraint
+                        CoMTracking
   };
   /**
    *  @brief Indentifiers to be used to add certain costs to the optimization
    *  problem.
    */
-  enum CostName       { ForcesCostID,    ///< sets NodeCost on force nodes
-                        EEMotionCostID   ///< sets NodeCost on endeffector velocity
+  enum CostName       { ForcesCostID,      ///< sets NodeCost on force nodes
+                        EEMotionCostID,    ///< sets NodeCost on endeffector velocity
+                        EETrackingCostID,  ///< sets TrackingCost on EE motion, associated weight rho(1)
+                        CoMTrackingCostID, ///< sets TrackingCost on CoM (linear), associated weight rho(0)
+                        AMTrackingCostID,  ///< sets TrackingCost on angular momentum, associated weight rho(2)
+                        LMTrackingCostID,  ///< sets TrackingCost on linear momentum, associated weight rho(3)
+                        MoITrackingCostID,  ///< sets TrackingCost on moment of inertia tensor, associated weight rho(4)
+                        CoMNodeTrackingCostID
   };
 
   using CostWeights      = std::vector<std::pair<CostName, double>>;
+  using CostWeights_track = std::vector<std::tuple<CostName, double, std::vector<Eigen::Vector3d>>>;
+  using CostWeights_node_track = std::vector<std::tuple<CostName, double, std::vector<Eigen::Vector3d>>>;
   using UsedConstraints  = std::vector<ConstraintName>;
   using VecTimes         = std::vector<double>;
   using EEID             = unsigned int;
@@ -162,7 +172,10 @@ public:
    * @brief Default parameters to get started.
    */
   Parameters();
+  Parameters(const std::vector<Eigen::Vector3d>& target, const Eigen::VectorXd& rho, double time_step);
   virtual ~Parameters() = default;
+
+  std::vector<Eigen::Vector3d> target_;
 
   /// Number and initial duration of each foot's swing and stance phases.
   std::vector<VecTimes> ee_phase_durations_;
@@ -176,6 +189,12 @@ public:
   /// Which costs should be used in the optimiation problem.
   CostWeights costs_;
 
+  /// Tracking costs
+  CostWeights_track costs_track_;
+
+  /// Node Tracking costs
+  CostWeights_node_track costs_node_track_;
+
   /// Interval at which the dynamic constraint is enforced.
   double dt_constraint_dynamic_;
 
@@ -185,8 +204,23 @@ public:
   /// Interval at which the base motion constraint is enforced.
   double dt_constraint_base_motion_;
 
+  /// Interval at which the EE tracking cost is enforced
+  double dt_cost_ee_tracking;
+
+  /// Interval at which the CoM tracking cost is enforced
+  double dt_cost_com_tracking;
+
   /// Fixed duration of each cubic polynomial describing the base motion.
   double duration_base_polynomial_;
+
+  /// Fixed duration of each cubic polynomial describing the CoM motion.
+  double duration_com_polynomial_;
+
+  /// Fixed duration of each cubic polynomial describing the CoM motion.
+  double duration_angular_momentum_polynomial_;
+  
+  /// Fixed duration of each cubic polynomial describing the base motion.
+  double duration_ellipsoid_polynomial_;
 
   /// Number of polynomials to parameterize foot movement during swing phases.
   int ee_polynomials_per_swing_phase_;
@@ -216,6 +250,15 @@ public:
 
   /// The durations of each base polynomial in the spline (lin+ang).
   VecTimes GetBasePolyDurations() const;
+
+  /// The durations of each CoM polynomial in the spline (lin+ang).
+  VecTimes GetCoMPolyDurations() const;
+
+  /// The durations of each angular momentum polynomial in the spline (3D).
+  VecTimes GetAMPolyDurations() const;
+  
+  /// The durations of each base polynomial in the spline (lin+ang).
+  VecTimes GetEllipsoidPolyDurations() const;
 
   /// The number of phases allowed for endeffector ee.
   int GetPhaseCount(EEID ee) const;

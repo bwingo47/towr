@@ -43,7 +43,7 @@ PhaseDurations::PhaseDurations (EndeffectorID ee,
                                 bool is_first_phase_in_contact,
                                 double min_duration,
                                 double max_duration)
-    // -1 since last phase-duration is not optimized over, but comes from total time
+    // -1 since last phase-duration is not optimized over, but comes from total time. GetRows() will return timings.size()-1
     :VariableSet(timings.size()-1, id::EESchedule(ee))
 {
   durations_ = timings;
@@ -128,7 +128,10 @@ PhaseDurations::GetJacobianOfPos (int current_phase,
                                   const VectorXd& dx_dT,
                                   const VectorXd& xd) const
 {
+  //n_dim is the dimension of the velocity component of a node
   int n_dim = xd.rows();
+
+  //GetRows() return durations_.size()-1, i.e. the number of durations to be optimized over
   Eigen::MatrixXd jac = Eigen::MatrixXd::Zero(n_dim, GetRows());
 
   bool in_last_phase = (current_phase == durations_.size()-1);

@@ -42,8 +42,15 @@ namespace id {
 
 static const std::string base_lin_nodes    = "base-lin";
 static const std::string base_ang_nodes    = "base-ang";
+static const std::string com_lin_nodes    = "com-lin";
+static const std::string angular_momentum_nodes    = "angular-momentum";
+static const std::string com_ang_nodes    = "com-ang";
+static const std::string ellipsoid_semi_axes_nodes   = "ellip-axes";
+static const std::string ellipsoid_orientation_nodes   = "ellip-orientation";
+
 static const std::string ee_motion_nodes   = "ee-motion_";
 static const std::string ee_force_nodes    = "ee-force_";
+static const std::string angular_momentum_phase_based_nodes    = "angular-momentum-phase-based";
 static const std::string contact_schedule  = "ee-schedule";
 
 

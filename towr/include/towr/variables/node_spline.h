@@ -79,7 +79,7 @@ public:
    * @brief How the spline changes when the node values change.
    * @param poly_id  Polynomial for which the sensitivity is desired.
    * @param t_local  Local time in that specific polynomial.
-   * @param dxdt  Whether the derivative of the pos, vel or acc is desired.
+   * @param dxdt  Whether the Jacobian of the pos, vel or acc is desired.
    * @return the pxn Jacobian, where:
    *             p: Number of dimensions of the spline
    *             n: Number of optimized node variables.

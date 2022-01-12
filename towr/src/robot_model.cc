@@ -30,9 +30,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <towr/models/robot_model.h>
 
 #include <towr/models/examples/monoped_model.h>
+#include <towr/models/examples/monoped_with_momentum_model.h>
 #include <towr/models/examples/biped_model.h>
 #include <towr/models/examples/hyq_model.h>
 #include <towr/models/examples/anymal_model.h>
+#include <towr/models/examples/a1_model.h>
+#include <towr/models/examples/a1_with_momentum_model.h>
 
 namespace towr {
 
@@ -40,6 +43,10 @@ namespace towr {
 RobotModel::RobotModel(Robot robot)
 {
   switch (robot) {
+    case MonopedWithMomentum:
+      srbd_momentum_model_   = std::make_shared<MonopedWithMomentumDynamicModel>();
+      kinematic_model_ = std::make_shared<MonopedWithMomentumKinematicModel>();
+      break;
     case Monoped:
       dynamic_model_   = std::make_shared<MonopedDynamicModel>();
       kinematic_model_ = std::make_shared<MonopedKinematicModel>();
@@ -55,6 +62,14 @@ RobotModel::RobotModel(Robot robot)
     case Anymal:
       dynamic_model_   = std::make_shared<AnymalDynamicModel>();
       kinematic_model_ = std::make_shared<AnymalKinematicModel>();
+      break;
+    case A1:
+      dynamic_model_   = std::make_shared<A1DynamicModel>();
+      kinematic_model_ = std::make_shared<A1KinematicModel>();
+      break;
+    case A1WithMomentum:
+      srbd_momentum_model_   = std::make_shared<A1WithMomentumDynamicModel>();
+      kinematic_model_ = std::make_shared<A1WithMomentumKinematicModel>();
       break;
     default:
       assert(false); // Error: Robot model not implemented.

@@ -109,4 +109,3 @@ RangeOfMotionConstraint::UpdateJacobianAtInstance (double t, int k,
 }
 
 } /* namespace xpp */
-

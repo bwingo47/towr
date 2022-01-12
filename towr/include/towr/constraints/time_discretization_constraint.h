@@ -87,7 +87,8 @@ private:
   virtual void UpdateConstraintAtInstance(double t, int k, VectorXd& g) const = 0;
 
   /**
-   * @brief Sets upper/lower bound a specific time t, corresponding to node k.
+   * @brief Sets upper/lower bound for all the constraint functions
+   * in this class, at a specific time t, corresponding to node k.
    * @param t  The time along the trajectory to set the bounds.
    * @param k  The index of the time t, so t=k*dt
    * @param[in/out] b The complete vector of bounds, for which the corresponding

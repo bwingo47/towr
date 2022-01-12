@@ -56,6 +56,8 @@ public:
    * @param dim  The number of dimensions this state has (e.g. x,y,z).
    * @param n_derivatives  The number of derivatives. In control a state
    *                       is usually made up of two (positions and velocities.
+   *                       n_derivatives = 1 ==> positions
+   *                       n_derivatives = 2 ==> positions, velocity
    */
   explicit State(int dim, int n_derivatives);
   virtual ~State() = default;
@@ -113,6 +115,9 @@ public:
    */
   explicit Node(int dim = 0) : State(dim, n_derivatives) {};
   virtual ~Node() = default;
+
+//  explicit Node(int dim);
+//  virtual ~Node() = default;
 };
 
 
@@ -120,10 +125,60 @@ public:
  * @brief Can represent the 6Degree-of-Freedom floating base of a robot.
  */
 struct BaseState {
+  /**
+   * Constructor call, initializing member variables lin and ang
+   * during the constructor call.
+   */
   BaseState(): lin(3), ang(3) {}
 
+  /**
+   * lin and ang are member variables of struct BaseState.
+   * On the side note, all member functions, variable of struct
+   * are by default public, and in addition, derived struct from class/struct
+   * also default all access-specifier to be public.
+   */
   Node lin; ///< linear position x,y,z and velocities.
   Node ang; ///< angular euler roll, pitch, yaw and rates.
+};
+
+/**
+ * @brief Can represent the 6Degree-of-Freedom floating base of a robot.
+ */
+struct CoMState {
+    /**
+     * lin and ang are member variables of struct BaseState.
+     * On the side note, all member functions, variable of struct
+     * are by default public, and in addition, derived struct from class/struct
+     * also default all access-specifier to be public.
+     */
+    CoMState(): lin(3), ang(3) {}
+    
+    Node lin; ///< linear position x,y,z and velocities.
+    Node ang; ///< angular euler roll, pitch, yaw and rates.
+};
+
+
+struct EllipsoidState {
+    /**
+     * Constructor call, initializing member variables lin and ang
+     * during the constructor call.
+     */
+    EllipsoidState(): axis(3), orient(3) {}
+    
+    Node axis; ///< linear position x,y,z and velocities.
+    Node orient; ///< angular euler roll, pitch, yaw and rates.
+};
+
+struct AngularMomentumState {
+  AngularMomentumState(): values(3) {}
+
+  Node values;
+};
+
+struct DebugDummyState {
+  DebugDummyState(): node1(3), node2(3) {}
+  Node node1;
+  Node node2;
 };
 
 

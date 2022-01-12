@@ -50,8 +50,16 @@ namespace towr {
 /**
  * @brief Position and velocity of nodes used to generate a Hermite spline.
  *
- * #### Four nodes defining a single spline (e.g. foot position in x-direction)
+ * #### Four nodes defining a single composite spline, consists of 3 individual
+ * splines (e.g. foot position in x-direction)
  * \image html nodes.jpg
+ *
+ * This is an Abstract class, can't be instantiated. Derived subclasses, such as
+ * NodeVariablesAll and NodeVariablesPhaseBased, must implement the pure virtual
+ * function defined below. In the image example, (x0, x0d), ..., (xT, xTd) represents
+ * T nodes along the composite spline. A single polynomial is defined between (x0, x0d) and
+ * (x1, x1d). This spline can be completely determined by x0, x0d, x1, x1d, and the time
+ * duration Delta T1 between the 2 nodes.
  *
  * Instead of setting the polynomial coefficients directly, a third-order
  * polynomial is also fully defined by the value and first-derivative of the
@@ -84,8 +92,15 @@ public:
    */
   struct NodeValueInfo {
     int id_;   ///< ID of the associated node (0 =< id < number of nodes in spline).
-    Dx deriv_; ///< Derivative (pos,vel) of the node with that ID.
-    int dim_;  ///< Dimension (x,y,z) of that derivative.
+               ///< Intuitively, think of id_ as the node index in a std::vector<Nodes>
+
+    Dx deriv_; ///< Derivative (pos,vel) of the node with that ID. Indicate which derivative
+               ///< component of the node, i.e. position component or velocity component
+               ///< Intuitively, think of deriv_ as the component index of a node, i.e. an element of std::vector<Nodes>
+
+    int dim_;  ///< Dimension (x,y,z) of that derivative. Indicate which dimension of the
+               ///< derivative component of the node, i.e. x-component, y-component, ....
+               ///< Intuitively, think of dim_ as the sub-component index of a component of a node.
 
     NodeValueInfo() = default;
     NodeValueInfo(int node_id, Dx deriv, int node_dim);
@@ -97,6 +112,8 @@ public:
    * @param opt_idx  The index (=row) of the optimization variable.
    * @return All node values affected by this optimization variable.
    *
+   * This is a pure virtual function. This makes the NodeVariables class implicitly
+   * Abstract. Abstract class can't be instantiated.
    * This function determines which node values are optimized over, and which
    * nodes values are set by the same optimization variable.
    *
@@ -172,6 +189,7 @@ public:
 
   /**
    * @returns  The dimensions (x,y,z) of every node.
+   * Dimensions of each node's component, i.e. dimensions of position or velocity of the node.
    */
   int GetDim() const;
 
@@ -213,7 +231,7 @@ protected:
 
   VecBound bounds_; ///< the bounds on the node values.
   std::vector<Node> nodes_;
-  int n_dim_;
+  int n_dim_;    ///< The number of dimensions each node component, i.e. position, velocity, has.
 
 private:
   /**

@@ -59,6 +59,20 @@ static constexpr int k6D = 6; // X,Y,Z, roll, pitch, yaw
 enum Dim6D { AX=0, AY, AZ, LX, LY, LZ };
 static const Dim6D AllDim6D[] = {AX, AY, AZ, LX, LY, LZ};
 
+// 9-dimensional
+// 'a' stands for angular, 'l' for linear, 'h' stands for angular momentum,
+// 'e' stands for ellipsoid axes, 'v' stands for ellipsoid orientation.
+static constexpr int k9D = 9; // X,Y,Z, roll, pitch, yaw, am_X, am_Y, am_Z
+enum Dim9D { aX=0, aY, aZ, lX, lY, lZ , hX, hY, hZ};
+static const Dim9D AllDim9D[] = {aX, aY, aZ, lX, lY, lZ , hX, hY, hZ};
+
+//// 15-dimensional
+//// 'a' stands for angular, 'l' for linear, 'h' stands for angular momentum,
+//// 'e' stands for ellipsoid axes, 'v' stands for ellipsoid orientation.
+//static constexpr int k15D = 15; // X,Y,Z, roll, pitch, yaw, am_X, am_Y, am_Z, eX, eY, eZ, vX, vY, vZ
+//enum Dim15D { aX=0, aY, aZ, lX, lY, lZ , hX, hY, hZ, eX, eY, eZ, vX, vY, vZ};
+//static const Dim15D AllDim15D[] = {aX, aY, aZ, lX, lY, lZ , hX, hY, hZ, eX, eY, eZ, vX, vY, vZ};
+
 } // namespace towr
 
 #endif /* TOWR_VARIABLES_CARTESIAN_DIMENSIONS_H_ */

@@ -71,11 +71,20 @@ NodeSpline::GetJacobianWrtNodes (double t_global, Dx dxdt) const
 NodeSpline::Jacobian
 NodeSpline::GetJacobianWrtNodes (int id, double t_local, Dx dxdt) const
 {
+  /**
+   * jac is a copy of jac_wrt_nodes_structure_, which is an empty sparse matrix.
+   * This ensures that this const member function does not modify the member variable
+   * jac_wrt_nodes_structure_
+   */
   Jacobian jac = jac_wrt_nodes_structure_;
   FillJacobianWrtNodes(id, t_local, dxdt, jac, false);
 
   // needed to avoid Eigen::assert failure "wrong storage order" triggered
   // in dynamic_constraint.cc
+
+  /**
+   * compress the sparse matrix, such that no empty space left in storage.
+   */
   jac.makeCompressed();
 
   return jac;
@@ -85,6 +94,26 @@ void
 NodeSpline::FillJacobianWrtNodes (int poly_id, double t_local, Dx dxdt,
                                   Jacobian& jac, bool fill_with_zeros) const
 {
+  /**
+   * DSP: derivative wrt start node's position
+   * DSV: derivative wrt start node's velocity
+   * DEP: derivative wrt end node's position
+   * DEV: derivative wrt end node's velocity
+   *
+   * example shape of returned 'jac' when 'node_variables->GetDim()' == 3.
+   * when idx is only associated to one nvi, i.e. for NodeVariablesAll,
+   *             DSP  0   0   DSV  0   0    DEP  0   0   DEV  0   0
+   * jac = [ ...  0  DSP  0    0  DSV  0     0  DEP  0    0  DEV  0  ... ]
+   *              0   0  DSP   0  0   DSV    0   0  DEP   0  0   DEV
+   *
+   * when idx is associated to multiple nvi(s), i.e. for NodeVariablesPhaseBased,
+   * say for ee motion, one optimization variable corresponds to both the start
+   * and end node x-position for a constant spline. For this case,
+   *             DSP + DEP     0         0     DSV + DEV     0         0
+   * jac = [ ...     0     DSP + DEP     0         0     DSV + DEV     0     ... ]
+   *                 0         0     DSP + DEP     0         0     DSV + DEV
+   *
+   */
   for (int idx=0; idx<jac.cols(); ++idx) {
     for (auto nvi : node_values_->GetNodeValuesInfo(idx)) {
       for (auto side : {NodesVariables::Side::Start, NodesVariables::Side::End}) { // every jacobian is affected by two nodes
@@ -94,8 +123,10 @@ NodeSpline::FillJacobianWrtNodes (int poly_id, double t_local, Dx dxdt,
           double val = 0.0;
 
           if (side == NodesVariables::Side::Start)
+            /// DSP when nvi.deriv_ == KPoS or DSV when nvi.deriv_ == KVel
             val = cubic_polys_.at(poly_id).GetDerivativeWrtStartNode(dxdt, nvi.deriv_, t_local);
           else if (side == NodesVariables::Side::End)
+            /// DEP when nvi.deriv_ == KPoS or DEV when nvi.deriv_ == KVel
             val = cubic_polys_.at(poly_id).GetDerivativeWrtEndNode(dxdt, nvi.deriv_, t_local);
           else
             assert(false); // this shouldn't happen
