@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rosbag/view.h>
 #include <rosbag/message_instance.h>
 #include <boost/foreach.hpp>
-
+#include <std_msgs/UInt8.h>
 #include <xpp_msgs/RobotStateCartesian.h>
 
 /**
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 
   // write the message with modified timestamp into new bag file
   rosbag::Bag bag_w;
-  bag_w.open("/home/winklera/Desktop/matlab_rdy.bag", rosbag::bagmode::Write);
+  bag_w.open("/home/ziyi/.ros/python_rdy.bag", rosbag::bagmode::Write);
 
   BOOST_FOREACH(rosbag::MessageInstance const m, view)
   {
@@ -82,6 +82,7 @@ int main(int argc, char *argv[])
     for (int i=0; i<n_feet; ++i) {
       bag_w.write("foot_pos_"+std::to_string(i), t, state_msg->ee_motion.at(i).pos);
       bag_w.write("foot_force_"+std::to_string(i), t, state_msg->ee_forces.at(i));
+      // bag_w.write("contact_"+std::to_string(i), t, state_msg->ee_contact.at(i));
     }
   }
 
